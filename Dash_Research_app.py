@@ -1,3 +1,4 @@
+from gc import callbacks
 from dash import Dash, html, dcc, Input,Output
 import plotly.express as px
 import pandas as pd
@@ -6,21 +7,22 @@ import pandas as pd
 ## data sources to be used for this project
 
 bacteria = pd.read_excel("data/Bacteria_Firebird_ALL_2_6_2022.xlsx")
+
+## cleaning DataFrame
+bacteria = bacteria[['Location','SRB','APB','Sample Date', 'Cellular (pg per mL)']].copy()
 bacteria.sort_values(by="Sample Date")
+print(bacteria)
 
-
-# dropping unnecessary columns from dataframe
-bacteria.drop(columns=["Lab Test #","Lab #","Area","Center Name","Salesman","Lab Cost","Technician","Sample Type"])
 
 # Initiation of Dash App
 app = Dash(__name__)
 
-
-well_name = bacteria['Location'].values.tolist()
+## Location Column
+well_name = bacteria['Location'].unique()
 
 successful_Bacteria_Program = '''
-### Keys to a successful Biocide Program
 
+## Keys to a successful Biocide Program
 1. Adequate contact time (enought time to kill)
 2. Sufficient concentration for MEC "Minimum effective concentration
 3. Treatment frequency (prevent microbial rebound)
@@ -28,7 +30,6 @@ successful_Bacteria_Program = '''
 
 '''
 
-figB = px.bar(bacteria, x="Location", y="SRB", title="Bacteria Count")
 
 srb_apb_MD = '''
 ### Sulfate Reducing Bacteria (SRB)
@@ -52,7 +53,7 @@ The sulfate reducing bacteria are often found within this nutrient rich, oxygen 
 # Setting layout attributes
 colors = {
     'background': "#09B495",
-    'text': "#FFFFFF"
+    'text': "#FFFFFF",
 }
 
 app.layout = html.Div(style={'backgroundColor':colors['background']},
@@ -62,29 +63,45 @@ app.layout = html.Div(style={'backgroundColor':colors['background']},
             style={
                 'textAlign':'center',
                 'color':colors['text']
+                ,'padding':5
                 }
             ),
-        html.H3(
+        html.H4(
             children="Analyzed report for a well pull, including historic data colleted for the well.",
             style={
                 'textAlign':'center',
-                'color':colors["text"]
+                'color':'#000000'
             }
             ),
-        dcc.Markdown(successful_Bacteria_Program),
+        dcc.Markdown(successful_Bacteria_Program,style={'color':colors["text"],'textAlign':'center'}),
         dcc.Dropdown(
-            id="dropdown",
-            options= well_name
+           id="dropdown",
+           options=well_name
         ),
         dcc.Graph(
            id="Bacteria",
-           figure=figB,
-           style={
-
-           }
         ),
-         dcc.Markdown(srb_apb_MD),
+         dcc.Markdown(srb_apb_MD , style={'color':colors["text"],'padding':20}),
 ])
+
+@app.callback(
+    Output(component_id='Bacteria', component_property='figure'),
+    Input(component_id='dropdown', component_property='value')
+
+)
+
+def updateDashboard(my_dropdown):
+
+    df_bacteria = bacteria
+
+    bar_chart = px.bar(
+        df_bacteria,
+        x=my_dropdown,
+        y=df_bacteria['SRB']
+        )
+
+    return(bar_chart)
+
 
 if __name__ == '__main__':
     app.run_server(debug=True)

@@ -1,4 +1,4 @@
-from gc import callbacks
+
 from dash import Dash, html, dcc, Input,Output
 import plotly.express as px
 import pandas as pd
@@ -10,15 +10,11 @@ bacteria = pd.read_excel("data/Bacteria_Firebird_ALL_2_6_2022.xlsx")
 
 ## cleaning DataFrame
 bacteria = bacteria[['Location','SRB','APB','Sample Date', 'Cellular (pg per mL)']].copy()
+bacteria.set_index('Location')
 bacteria.sort_values(by="Sample Date")
-print(bacteria)
-
 
 # Initiation of Dash App
 app = Dash(__name__)
-
-## Location Column
-well_name = bacteria['Location'].unique()
 
 successful_Bacteria_Program = '''
 
@@ -29,7 +25,6 @@ successful_Bacteria_Program = '''
 4. Proactive monitoring (prevent issues from occuring)
 
 '''
-
 
 srb_apb_MD = '''
 ### Sulfate Reducing Bacteria (SRB)
@@ -47,17 +42,27 @@ Under these conditions, an acid-driven form of corrosion can occur causing metal
 These acidic metabolic by-products are produced under very reductive (oxygen free) environments. 
 The sulfate reducing bacteria are often found within this nutrient rich, oxygen free environment.
 
-
 '''
 
 # Setting layout attributes
 colors = {
-    'background': "#09B495",
+    'background': "#33491c",
     'text': "#FFFFFF",
 }
 
+# location_options = []
+# for location in bacteria['Location'].unique():
+#     location_options.append({'label' : str(location), 'value': location})
+
 app.layout = html.Div(style={'backgroundColor':colors['background']},
     children=[
+        # html.Img(
+        #     src="/imgs/index.jpg",
+        #     alt="Company Logo"
+        #     style={
+
+        #     }
+        # ),
         html.H1(
             children="Well Site Inspection",
             style={
@@ -70,13 +75,17 @@ app.layout = html.Div(style={'backgroundColor':colors['background']},
             children="Analyzed report for a well pull, including historic data colleted for the well.",
             style={
                 'textAlign':'center',
-                'color':'#000000'
+                'color':'#FFFFFF'
             }
             ),
-        dcc.Markdown(successful_Bacteria_Program,style={'color':colors["text"],'textAlign':'center'}),
+             html.Hr(),
+        dcc.Markdown(successful_Bacteria_Program,style={'color':colors["text"],'padding':10}),
+
         dcc.Dropdown(
+            bacteria['Location'].unique(),
            id="dropdown",
-           options=well_name
+           clearable=True,
+           placeholder= "Please select a location.."
         ),
         dcc.Graph(
            id="Bacteria",
@@ -85,22 +94,26 @@ app.layout = html.Div(style={'backgroundColor':colors['background']},
 ])
 
 @app.callback(
-    Output(component_id='Bacteria', component_property='figure'),
-    Input(component_id='dropdown', component_property='value')
+    Output("Bacteria", "figure"),
+    Input("dropdown", "value")
 
 )
 
 def updateDashboard(my_dropdown):
 
-    df_bacteria = bacteria
+    df_bacteria = bacteria[bacteria['Location'] == my_dropdown]
+    print(df_bacteria)
 
     bar_chart = px.bar(
-        df_bacteria,
-        x=my_dropdown,
-        y=df_bacteria['SRB']
+        data_frame=df_bacteria,
+        x  = "Location",
+        y = ["SRB","APB"],
+        title="Bacteria Sampling",
+        barmode='group'
+      
         )
 
-    return(bar_chart)
+    return bar_chart
 
 
 if __name__ == '__main__':
